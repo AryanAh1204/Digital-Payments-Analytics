@@ -18,6 +18,8 @@ body = ParagraphStyle("body", parent=styles["Normal"], fontSize=9.5, leading=13)
 doc = SimpleDocTemplate(
     str(ROOT / "memo.pdf"), pagesize=LETTER,
     topMargin=0.6 * inch, bottomMargin=0.6 * inch, leftMargin=0.7 * inch, rightMargin=0.7 * inch,
+    title="Digital Payments Transaction Analytics", author="Aryan Ahlawat",
+    subject="Segmentation, fraud patterns, and volume forecasting",
 )
 
 story = [

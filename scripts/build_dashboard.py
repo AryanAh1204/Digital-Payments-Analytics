@@ -21,6 +21,9 @@ def write_df(ws, df, start_row=1):
 
 
 wb = Workbook()
+wb.properties.creator = "Aryan Ahlawat"
+wb.properties.lastModifiedBy = "Aryan Ahlawat"
+wb.properties.title = "Digital Payments Transaction Analytics"
 
 # --- Sheet 1: daily volume pivot (day x type) ---
 daily = pd.read_csv(OUT / "daily_volume_by_type.csv")
