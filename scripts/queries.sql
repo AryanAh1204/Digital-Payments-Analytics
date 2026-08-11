@@ -1,4 +1,4 @@
--- Digital Payments Transaction Analytics — Phase 1 SQL
+-- Digital Payments Transaction Analytics: Phase 1 SQL
 -- Run against transactions view (see scripts/run_sql_queries.py). DuckDB dialect.
 
 -- Q1: daily_volume_by_type

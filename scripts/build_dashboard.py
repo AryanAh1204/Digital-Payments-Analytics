@@ -91,7 +91,7 @@ write_df(ws4, balance)
 ws4.append([])
 ws4.append(["Fraud chain search (TRANSFER->CASH_OUT via shared account, <=3 steps, <5% amount drift)"])
 if len(fraud_chains) == 0:
-    ws4.append(["No matches in full dataset -- see README for the negative-result writeup"])
+    ws4.append(["No matches in full dataset. See README for the negative-result writeup."])
 else:
     write_df(ws4, fraud_chains)
 
