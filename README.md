@@ -33,6 +33,7 @@ Full writeup: [`memo.pdf`](memo.pdf).
 |---|---|
 | `scripts/queries.sql` | 5 SQL queries: daily volume by type, fraud rate by type, top senders, mule-chain hypothesis test, balance reconciliation |
 | `scripts/run_sql_queries.py` | Runs `queries.sql` against the CSV via DuckDB, writes each result to `outputs/` |
+| `scripts/make_data_sample.py` | Writes `data/sample_transactions.csv`, a 100k-row random sample of the full file |
 | `analysis.ipynb` | RFM segmentation (quantile scoring, 5 business tiers) and 7-day volume forecast |
 | `scripts/build_dashboard.py` | Builds `dashboard/PhonePe_Digital_Payments_Dashboard.xlsx` (pivot + 3 charts) from `outputs/` |
 | `scripts/build_memo.py` | Builds `memo.pdf` from the same computed numbers |
@@ -44,8 +45,9 @@ Full writeup: [`memo.pdf`](memo.pdf).
 
 ```bash
 pip install -r requirements.txt
-# place the raw CSV at data/PS_20174392719_1491204439457_log.csv
-# not included in this repo, see Data below
+# place the full raw CSV at data/PS_20174392719_1491204439457_log.csv
+# not included in this repo, see Data below (data/sample_transactions.csv is a
+# 100k-row sample for a quick look, not enough to reproduce the numbers below)
 
 python scripts/run_sql_queries.py
 jupyter nbconvert --to notebook --execute --inplace analysis.ipynb
@@ -93,6 +95,11 @@ aggregated version, is included.
 
 ## Data
 
-Synthetic mobile payment transaction dataset from Kaggle, 6,362,620 rows. Not included in
-this repo because of size (493MB) and redistribution terms; download it separately and
-place it at `data/PS_20174392719_1491204439457_log.csv` to reproduce.
+Synthetic mobile payment transaction dataset from Kaggle, 6,362,620 rows. The full file
+(493MB) isn't in this repo because of size and redistribution terms; download it
+separately and place it at `data/PS_20174392719_1491204439457_log.csv` to reproduce.
+`data/sample_transactions.csv` is a random 100k-row sample (about 7.4MB, made with
+`scripts/make_data_sample.py`) checked into the repo so the data has a shape you can look
+at without the download. It's a random sample, not a stratified one, so rare fraud rows
+are thin in it; it's for a quick look at the schema, not for reproducing the numbers
+above.
