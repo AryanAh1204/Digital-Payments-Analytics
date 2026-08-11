@@ -1,0 +1,6 @@
+segment,accounts,total_value,pct_of_accounts,pct_of_value
+High-value regulars,1588249,540790288428.26,25.0,47.26
+High-value one-off,1588404,538052422916.15,25.0,47.02
+Low-value frequent,1588404,32783246268.29,25.0,2.86
+Standard,792275,16937343125.8,12.47,1.48
+Dormant,795975,15829644021.27,12.53,1.38
