@@ -7,39 +7,44 @@ cells = []
 cells.append(nbf.v4.new_markdown_cell(
 """# Digital Payments Transaction Analytics: RFM Segmentation and Volume Forecast
 
-Aggregation runs in DuckDB directly against the CSV. It never loads the full 6.3M-row
-table into pandas, only small, already-aggregated results, which then get scored and
-labeled in pandas."""
+Aggregation runs in Postgres against the `transactions` table (loaded by
+`scripts/load_data.py`). It never pulls the full 6.36M-row table into pandas, only small,
+already-aggregated results, which then get scored and labeled in pandas."""
 ))
 
 cells.append(nbf.v4.new_code_cell(
-"""import duckdb
+"""import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from sqlalchemy import create_engine
 
 ROOT = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
-DATA = ROOT / "data" / "PS_20174392719_1491204439457_log.csv"
 OUT = ROOT / "outputs"
 
-con = duckdb.connect()
-con.execute(f"CREATE VIEW transactions AS SELECT * FROM read_csv_auto('{DATA}')")
-max_step = con.execute("SELECT MAX(step) FROM transactions").fetchone()[0]
+host = os.environ.get("PGHOST", "localhost")
+port = os.environ.get("PGPORT", "5432")
+dbname = os.environ.get("PGDATABASE", "digital_payments")
+user = os.environ.get("PGUSER", "postgres")
+password = os.environ.get("PGPASSWORD", "")
+engine = create_engine(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}")
+
+max_step = pd.read_sql_query("SELECT MAX(step) FROM transactions", engine).iloc[0, 0]
 max_step"""
 ))
 
 cells.append(nbf.v4.new_markdown_cell("## RFM segmentation (per `nameOrig`)"))
 
 cells.append(nbf.v4.new_code_cell(
-"""rfm = con.execute(\"\"\"
+"""rfm = pd.read_sql_query(\"\"\"
     SELECT
-        nameOrig,
+        nameOrig AS "nameOrig",
         MAX(step) AS recency_step,
         COUNT(*) AS frequency,
         SUM(amount) AS monetary
     FROM transactions
     GROUP BY nameOrig
-\"\"\").fetchdf()
+\"\"\", engine)
 
 rfm["recency"] = max_step - rfm["recency_step"]
 rfm["r_score"] = pd.qcut(rfm["recency"], 4, labels=[4, 3, 2, 1], duplicates="drop").astype(int)
@@ -91,12 +96,12 @@ print("sanity check passed: segment percentages sum to 100")"""
 cells.append(nbf.v4.new_markdown_cell("## Daily volume forecast (7-day linear trend)"))
 
 cells.append(nbf.v4.new_code_cell(
-"""daily = con.execute(\"\"\"
+"""daily = pd.read_sql_query(\"\"\"
     SELECT CEIL(step / 24.0) AS day, COUNT(*) AS txn_count, SUM(amount) AS txn_value
     FROM transactions
-    GROUP BY day
+    GROUP BY CEIL(step / 24.0)
     ORDER BY day
-\"\"\").fetchdf()
+\"\"\", engine)
 
 recent = daily.tail(7)  # day 1-17 runs 5-14x higher than day 18-31 (level shift);
 # a full-history fit's slope overshoots negative on extrapolation, so trend on the recent

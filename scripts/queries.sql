@@ -1,5 +1,6 @@
 -- Digital Payments Transaction Analytics: Phase 1 SQL
--- Run against transactions view (see scripts/run_sql_queries.py). DuckDB dialect.
+-- Run against the transactions table in Postgres (see scripts/load_data.py and
+-- scripts/run_sql_queries.py). Standard SQL, no Postgres-specific syntax.
 
 -- Q1: daily_volume_by_type
 SELECT

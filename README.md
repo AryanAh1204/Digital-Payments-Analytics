@@ -10,8 +10,8 @@ that needs a review cycle.
 
 I queried transaction volume and value by type and day, fraud rate by type, top senders by
 value, a test of whether TRANSFER and CASH_OUT fraud are linked through a shared "mule"
-account, and a balance reconciliation check, all in SQL against the raw 6.36M-row file via
-DuckDB.
+account, and a balance reconciliation check, all in SQL against the 6.36M-row file loaded
+into Postgres.
 
 Fraud sits entirely in TRANSFER (0.77%) and CASH_OUT (0.18%), and it's sharper than the
 type-level rate suggests: 96% of fraud TRANSFERs drain the account to about zero in one
@@ -31,9 +31,10 @@ Full writeup: [`memo.pdf`](memo.pdf).
 
 | File | What it is |
 |---|---|
+| `scripts/load_data.py` | Creates the `transactions` table and bulk-loads the raw CSV into Postgres via `COPY` |
 | `scripts/queries.sql` | 5 SQL queries: daily volume by type, fraud rate by type, top senders, mule-chain hypothesis test, balance reconciliation |
-| `scripts/run_sql_queries.py` | Runs `queries.sql` against the CSV via DuckDB, writes each result to `outputs/` |
-| `scripts/make_data_sample.py` | Writes `data/sample_transactions.csv`, a 100k-row random sample of the full file |
+| `scripts/run_sql_queries.py` | Runs `queries.sql` against the `transactions` table, writes each result to `outputs/` |
+| `scripts/make_data_sample.py` | Writes `data/sample_transactions.csv`, a 100k-row random sample of the full table |
 | `analysis.ipynb` | RFM segmentation (quantile scoring, 5 business tiers) and 7-day volume forecast |
 | `scripts/build_dashboard.py` | Builds `dashboard/PhonePe_Digital_Payments_Dashboard.xlsx` (pivot + 3 charts) from `outputs/` |
 | `scripts/build_memo.py` | Builds `memo.pdf` from the same computed numbers |
@@ -49,6 +50,11 @@ pip install -r requirements.txt
 # not included in this repo, see Data below (data/sample_transactions.csv is a
 # 100k-row sample for a quick look, not enough to reproduce the numbers below)
 
+# needs a running Postgres instance; connection is read from the standard
+# libpq env vars (PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD), defaulting
+# to localhost:5432/digital_payments as postgres
+createdb digital_payments
+python scripts/load_data.py
 python scripts/run_sql_queries.py
 jupyter nbconvert --to notebook --execute --inplace analysis.ipynb
 python scripts/build_dashboard.py
@@ -68,10 +74,17 @@ than the later ones), so fitting on the whole history drags the slope negative. 
 the recent 7-day window instead avoids extrapolating that early high-volume trend into a
 negative forecast. The forecast is also floored at zero.
 
-Every aggregation runs as a DuckDB `GROUP BY` directly against the CSV on disk. The full
-6.36M-row raw table never gets loaded into pandas; only the small, already-aggregated
-results do (per-account RFM aggregates, daily totals). That's what lets this run on an
-8GB-RAM laptop without subsampling the data.
+Every aggregation runs as a Postgres `GROUP BY` server-side, after `scripts/load_data.py`
+loads the CSV into a `transactions` table via `COPY`. The full 6.36M-row table never gets
+pulled into pandas; only the small, already-aggregated results do (per-account RFM
+aggregates, daily totals). That's what lets this run on an 8GB-RAM laptop without
+subsampling the data.
+
+Postgres folds unquoted identifiers to lowercase, so a plain `SELECT nameOrig` comes back
+as a `nameorig` column. `queries.sql` is left as unquoted plain SQL (it's portable that way,
+runs unchanged on most engines), so `top_senders.csv` and the other query outputs have
+lowercase headers. `analysis.ipynb`'s own queries quote the alias where the pandas code
+downstream needs the exact original casing.
 
 ## Data caveats
 
