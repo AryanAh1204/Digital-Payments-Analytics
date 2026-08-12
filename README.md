@@ -17,8 +17,8 @@ Fraud sits entirely in TRANSFER (0.77%) and CASH_OUT (0.18%), and it's sharper t
 type-level rate suggests: 96% of fraud TRANSFERs drain the account to about zero in one
 step. Account value splits close to evenly between two very different high-value tiers,
 frequent regulars and one-off large senders, which together are half the accounts but 94%
-of the value. The mule-chain hypothesis, which gets assumed a lot for this kind of data,
-doesn't hold here. TRANSFER and CASH_OUT fraud never share an account.
+of the value. The mule-chain story people usually tell about this kind of data doesn't
+hold here, either. TRANSFER and CASH_OUT fraud never share an account.
 
 I'd flag near-total balance drains in real time instead of using a blunt per-type rate
 threshold, and tier monitoring by RFM segment: light on high-frequency regulars, tight on

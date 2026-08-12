@@ -5,46 +5,31 @@ nb = nbf.v4.new_notebook()
 cells = []
 
 cells.append(nbf.v4.new_markdown_cell(
-"""# Digital Payments Transaction Analytics: RFM Segmentation and Volume Forecast
+"""# RFM Segmentation and Volume Forecast
 
-Aggregation runs in Postgres against the `transactions` table (loaded by
-`scripts/load_data.py`). It never pulls the full 6.36M-row table into pandas, only small,
-already-aggregated results, which then get scored and labeled in pandas."""
+Basic customer segmentation and a simple forecast, using the transactions table loaded
+into Postgres by `scripts/load_data.py`. Run this notebook from the project root."""
 ))
 
 cells.append(nbf.v4.new_code_cell(
-"""import os
-import numpy as np
+"""import numpy as np
 import pandas as pd
-from pathlib import Path
-from sqlalchemy import create_engine
+import psycopg2
 
-ROOT = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
-OUT = ROOT / "outputs"
+conn = psycopg2.connect(dbname="digital_payments", user="postgres", password="", host="localhost", port="5432")
 
-host = os.environ.get("PGHOST", "localhost")
-port = os.environ.get("PGPORT", "5432")
-dbname = os.environ.get("PGDATABASE", "digital_payments")
-user = os.environ.get("PGUSER", "postgres")
-password = os.environ.get("PGPASSWORD", "")
-engine = create_engine(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}")
-
-max_step = pd.read_sql_query("SELECT MAX(step) FROM transactions", engine).iloc[0, 0]
+max_step = pd.read_sql("SELECT MAX(step) FROM transactions", conn).iloc[0, 0]
 max_step"""
 ))
 
-cells.append(nbf.v4.new_markdown_cell("## RFM segmentation (per `nameOrig`)"))
+cells.append(nbf.v4.new_markdown_cell("## RFM segmentation (per `nameorig`)"))
 
 cells.append(nbf.v4.new_code_cell(
-"""rfm = pd.read_sql_query(\"\"\"
-    SELECT
-        nameOrig AS "nameOrig",
-        MAX(step) AS recency_step,
-        COUNT(*) AS frequency,
-        SUM(amount) AS monetary
+"""rfm = pd.read_sql(\"\"\"
+    SELECT nameOrig, MAX(step) AS recency_step, COUNT(*) AS frequency, SUM(amount) AS monetary
     FROM transactions
     GROUP BY nameOrig
-\"\"\", engine)
+\"\"\", conn)
 
 rfm["recency"] = max_step - rfm["recency_step"]
 rfm["r_score"] = pd.qcut(rfm["recency"], 4, labels=[4, 3, 2, 1], duplicates="drop").astype(int)
@@ -72,7 +57,7 @@ rfm["segment"] = rfm.apply(label_segment, axis=1)
 
 segment_summary = (
     rfm.groupby("segment")
-    .agg(accounts=("nameOrig", "count"), total_value=("monetary", "sum"))
+    .agg(accounts=("nameorig", "count"), total_value=("monetary", "sum"))
     .reset_index()
     .sort_values("total_value", ascending=False)
 )
@@ -85,8 +70,8 @@ cells.append(nbf.v4.new_code_cell(
 """rfm_size_mb = rfm.memory_usage(deep=True).sum() / 1e6
 print(f"rfm_segments_detail: {len(rfm):,} rows, ~{rfm_size_mb:.1f} MB in memory")
 
-rfm.to_csv(OUT / "rfm_segments_detail.csv", index=False)
-segment_summary.to_csv(OUT / "segment_summary.csv", index=False)
+rfm.to_csv("outputs/rfm_segments_detail.csv", index=False)
+segment_summary.to_csv("outputs/segment_summary.csv", index=False)
 
 assert abs(segment_summary["pct_of_accounts"].sum() - 100) < 0.1
 assert abs(segment_summary["pct_of_value"].sum() - 100) < 0.1
@@ -96,12 +81,12 @@ print("sanity check passed: segment percentages sum to 100")"""
 cells.append(nbf.v4.new_markdown_cell("## Daily volume forecast (7-day linear trend)"))
 
 cells.append(nbf.v4.new_code_cell(
-"""daily = pd.read_sql_query(\"\"\"
+"""daily = pd.read_sql(\"\"\"
     SELECT CEIL(step / 24.0) AS day, COUNT(*) AS txn_count, SUM(amount) AS txn_value
     FROM transactions
-    GROUP BY CEIL(step / 24.0)
+    GROUP BY day
     ORDER BY day
-\"\"\", engine)
+\"\"\", conn)
 
 recent = daily.tail(7)  # day 1-17 runs 5-14x higher than day 18-31 (level shift);
 # a full-history fit's slope overshoots negative on extrapolation, so trend on the recent
@@ -115,7 +100,7 @@ actual["type"] = "actual"
 forecast = pd.DataFrame({"day": future_days, "value": forecast_values, "type": "forecast"})
 
 combined = pd.concat([actual, forecast], ignore_index=True)
-combined.to_csv(OUT / "daily_volume_with_forecast.csv", index=False)
+combined.to_csv("outputs/daily_volume_with_forecast.csv", index=False)
 combined.tail(10)"""
 ))
 
