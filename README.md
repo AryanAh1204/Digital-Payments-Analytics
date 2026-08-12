@@ -45,7 +45,7 @@ Full writeup: [`memo.pdf`](memo.pdf).
 ## Reproducing
 
 ```bash
-pip install -r requirements.txt
+pip install psycopg2-binary sqlalchemy pandas numpy openpyxl reportlab matplotlib jupyter nbformat ipykernel
 # place the full raw CSV at data/PS_20174392719_1491204439457_log.csv
 # not included in this repo, see Data below (data/sample_transactions.csv is a
 # 100k-row sample for a quick look, not enough to reproduce the numbers below)
